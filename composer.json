@@ -1,0 +1,39 @@
+{
+    "name": "opis/pattern",
+    "license": "Apache-2.0",
+    "description": "Define patterns",
+    "keywords": ["opis", "pattern", "regex"],
+    "homepage": "http://opis.io",
+    "authors": [
+        {
+            "name": "Marius Sarca",
+            "email": "marius.sarca@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Opis\\Pattern\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Opis\\Pattern\\Test\\": "tests/"
+        }
+    },
+    "require": {
+        "php": ">=7.0.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^6.5"
+    },
+    "config": {
+        "preferred-install": "dist"
+    },
+    "prefer-stable": true,
+    "minimum-stability": "dev",
+    "extra": {
+        "branch-alias": {
+            "dev-master": "1.0.x-dev"
+        }
+    }
+}
