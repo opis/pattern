@@ -1,7 +1,7 @@
 {
     "name": "opis/pattern",
     "license": "Apache-2.0",
-    "description": "Define patterns",
+    "description": "A library that will help you defining patterns and build a valid regex for them",
     "keywords": ["opis", "pattern", "regex"],
     "homepage": "http://opis.io",
     "authors": [
