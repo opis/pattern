@@ -217,7 +217,7 @@ class Builder
         }
 
         $keys = array_filter(array_keys($parameters), function ($value) use ($parameters) {
-            return is_string($value) && strlen($value) > 0 && $parameters[$value] != null;
+            return is_string($value) && strlen($value) > 0 && isset($parameters[$value]);
         });
 
         return array_intersect_key($parameters, array_flip($keys));
