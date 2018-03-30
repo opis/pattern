@@ -82,14 +82,22 @@ class RegexBuilder
 
         for ($i = 0, $l = count($tokens); $i < $l; $i++) {
             $t = $tokens[$i];
+            $p = $tokens[$i - 1] ?? null;
             $n = $tokens[$i + 1] ?? null;
 
             if ($t['type'] === 'separator') {
                 if ($capture_left) {
                     if (isset($n)) {
                         if ($n['type'] === 'variable' && $n['opt']) {
-                            $regex[] = '(' . $sep . '(?P<' . preg_quote($n['value'], $delimiter) .
-                                '>(' . ($placeholders[$n['value']] ?? $default_exp) . ')))?';
+                            if (isset($p)) {
+                                $regex[] = '(' . $sep . '(?P<' . preg_quote($n['value'], $delimiter) .
+                                    '>(' . ($placeholders[$n['value']] ?? $default_exp) . ')))?';
+                            } else {
+                                $regex[] = $sep;
+                                $expr = '(?P<' . preg_quote($n['value'], $delimiter) .
+                                    '>(' . ($placeholders[$n['value']] ?? $default_exp) . '))';
+                                $regex[] = '(' . $expr . ($allow_trail ? $sep . '?' : '') . ')?';
+                            }
                             $i++;
                         } else {
                             $regex[] = preg_quote($t['value'], $delimiter);
