@@ -80,7 +80,7 @@ class RegexBuilder
 
         $sep = preg_quote($this->options[self::SEPARATOR_SYMBOL], $delimiter);
 
-        for($i = 0, $l = count($tokens); $i < $l; $i++) {
+        for ($i = 0, $l = count($tokens); $i < $l; $i++) {
             $t = $tokens[$i];
             $n = $tokens[$i + 1] ?? null;
 
@@ -88,7 +88,7 @@ class RegexBuilder
                 if ($capture_left) {
                     if (isset($n)) {
                         if ($n['type'] === 'variable' && $n['opt']) {
-                            $regex[] = '(' . $sep . '(?P<' .preg_quote($n['value'], $delimiter) .
+                            $regex[] = '(' . $sep . '(?P<' . preg_quote($n['value'], $delimiter) .
                                 '>(' . ($placeholders[$n['value']] ?? $default_exp) . ')))?';
                             $i++;
                         } else {
@@ -107,23 +107,23 @@ class RegexBuilder
             } elseif ($t['type'] === 'variable') {
                 if ($capture_right) {
                     if (isset($n) && $n['type'] === 'separator' && $t['opt']) {
-                        $regex[] = '((?P<' .preg_quote($t['value'], $delimiter) .
+                        $regex[] = '((?P<' . preg_quote($t['value'], $delimiter) .
                             '>(' . ($placeholders[$t['value']] ?? $default_exp) . '))' . $sep . ')?';
                         $i++;
                     } else {
-                        $regex[] = '(?P<' .preg_quote($t['value'], $delimiter) .
+                        $regex[] = '(?P<' . preg_quote($t['value'], $delimiter) .
                             '>(' . ($placeholders[$t['value']] ?? $default_exp) . '))';
                     }
                 } else {
-                    $regex[] = '(?P<' .preg_quote($t['value'], $delimiter) .
+                    $regex[] = '(?P<' . preg_quote($t['value'], $delimiter) .
                         '>(' . ($placeholders[$t['value']] ?? $default_exp) . '))';
-                    if (!isset($n) && $allow_trail){
+                    if (!isset($n) && $allow_trail) {
                         $regex[] = $sep . '?';
                     }
                 }
             } else {
                 $regex[] = preg_quote($t['value'], $delimiter);
-                if ($capture_left && $allow_trail && !isset($n)){
+                if ($capture_left && $allow_trail && !isset($n)) {
                     $regex[] = $sep . '?';
                 }
             }
@@ -205,13 +205,13 @@ class RegexBuilder
             } else {
                 $c = $pattern[$i];
             }
-            switch ($state){
+            switch ($state) {
                 case 'data':
-                    if ($c === $sym_separator){
+                    if ($c === $sym_separator) {
                         if ($i - $data_marker > 0) {
                             $tokens[] = [
                                 'type' => 'data',
-                                'value' => substr($pattern, $data_marker,   $i - $data_marker)
+                                'value' => substr($pattern, $data_marker, $i - $data_marker)
                             ];
                         }
                         $tokens[] = [
@@ -238,7 +238,7 @@ class RegexBuilder
                         $state = 'opt_var';
                     } elseif ($c === $sym_end) {
                         $name = substr($pattern, $data_marker + 1, $i - $data_marker - 1);
-                        if (!preg_match('/^[a-zA-Z][a-zA-Z0-9_]*$/', $name)){
+                        if (!preg_match('/^[a-zA-Z][a-zA-Z0-9_]*$/', $name)) {
                             throw new \RuntimeException("Invalid name $name");
                         }
                         $tokens[] = [
@@ -257,9 +257,9 @@ class RegexBuilder
                     if ($c === null) {
                         $state = 'eof';
                         $i--;
-                    } elseif($c === $sym_end) {
+                    } elseif ($c === $sym_end) {
                         $name = substr($pattern, $data_marker + 1, ($i - 1) - $data_marker - 1);
-                        if (!preg_match('/^[a-zA-Z][a-zA-Z0-9_]*$/', $name)){
+                        if (!preg_match('/^[a-zA-Z][a-zA-Z0-9_]*$/', $name)) {
                             throw new \RuntimeException("Invalid name");
                         }
                         $data_marker = $i + 1;
