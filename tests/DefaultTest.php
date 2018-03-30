@@ -17,17 +17,17 @@
 
 namespace Opis\Pattern\Test;
 
-use Opis\Pattern\Builder;
+use Opis\Pattern\RegexBuilder;
 use PHPUnit\Framework\TestCase;
 
 class DefaultTest extends TestCase
 {
-    /** @var Builder */
+    /** @var RegexBuilder */
     protected $b;
 
     public function setUp()
     {
-        $this->b = new Builder();
+        $this->b = new RegexBuilder();
     }
 
     /**

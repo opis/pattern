@@ -17,7 +17,7 @@
 
 namespace Opis\Pattern;
 
-class Builder
+class RegexBuilder
 {
     /** @var array */
     protected $options;
