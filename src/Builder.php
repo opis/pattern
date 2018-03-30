@@ -19,84 +19,47 @@ namespace Opis\Pattern;
 
 class Builder
 {
-    const CAPTURE_LEFT = 0;
-    const CAPTURE_RIGHT = 1;
-    const CAPTURE_TRAIL = 2;
-    const ADD_OPT_SEPARATOR = 4;
-    const STANDARD_MODE = self::CAPTURE_LEFT | self::CAPTURE_TRAIL | self::ADD_OPT_SEPARATOR;
+    /** @var array */
+    protected $options;
 
-    const START_MARKER = 0;
-    const END_MARKER = 1;
-    const SEGMENT_DELIMITER = 2;
-    const OPT_PLACEHOLDER_SYMBOL = 3;
+    /** @var array */
+    protected $tokens = [];
+
+    const CAPTURE_LEFT = 1;
+    const CAPTURE_RIGHT = 2;
+    const ALLOW_OPT_TRAIL = 4;
+
+    const START_SYMBOL = 0;
+    const END_SYMBOL = 1;
+    const SEPARATOR_SYMBOL = 2;
+    const OPT_SYMBOL = 3;
     const CAPTURE_MODE = 4;
     const REGEX_DELIMITER = 5;
     const REGEX_MODIFIER = 6;
     const DEFAULT_REGEX_EXP = 7;
 
-    /** @var string */
-    protected $startMarker;
-
-    /** @var string */
-    protected $endMarker;
-
-    /** @var string */
-    protected $separator;
-
-    /** @var  int */
-    protected $captureMode;
-
-    /** @var bool */
-    protected $captureLeft;
-
-    /** @var bool */
-    protected $captureTrail;
-
-    /** @var bool */
-    protected $addOptionalSeparator;
-
-    /** @var string */
-    protected $optional;
-
-    /** @var string */
-    protected $delimiter;
-
-    /** @var string */
-    protected $modifier;
-
-    /** @var string */
-    protected $placeholder;
-
-    /** @var array */
-    protected $comp;
-
-    /** @var  null|array */
-    protected $options;
-
     /**
-     * Compiler constructor.
+     * Constructor
      * @param array $options
      */
     public function __construct(array $options = [])
     {
-        $this->captureMode = $capture = (int)($options[self::CAPTURE_MODE] ?? self::STANDARD_MODE);
-        $this->startMarker = $startTag = (string)($options[self::START_MARKER] ?? '{');
-        $this->endMarker = $endTag = (string)($options[self::END_MARKER] ?? '}');
-        $this->separator = $separator = (string)($options[self::SEGMENT_DELIMITER] ?? '/');
-        $this->optional = $optional = (string)($options[self::OPT_PLACEHOLDER_SYMBOL] ?? '?');
-        $this->delimiter = $delimiter = (string)($options[self::REGEX_DELIMITER] ?? '~');
-        $this->modifier = $modifier = (string)($options[self::REGEX_MODIFIER] ?? 'u');
-        $this->placeholder = $wildcard = (string)($options[self::DEFAULT_REGEX_EXP] ?? '[^' . preg_quote($separator, $delimiter) . ']+');
-        $this->captureLeft = ($capture & static::CAPTURE_RIGHT) === static::CAPTURE_LEFT;
-        $this->captureTrail = ($capture & static::CAPTURE_TRAIL) === static::CAPTURE_TRAIL;
-        $this->addOptionalSeparator = ($capture & static::ADD_OPT_SEPARATOR) === static::ADD_OPT_SEPARATOR;
-
-        $this->comp = [
-            preg_quote($startTag, $delimiter),
-            preg_quote($endTag, $delimiter),
-            preg_quote($separator, $delimiter),
-            preg_quote($optional, $delimiter)
+        $options += [
+            self::START_SYMBOL => '{',
+            self::END_SYMBOL => '}',
+            self::SEPARATOR_SYMBOL => '/',
+            self::OPT_SYMBOL => '?',
+            self::CAPTURE_MODE => self::CAPTURE_LEFT | self::ALLOW_OPT_TRAIL,
+            self::REGEX_DELIMITER => '~',
+            self::REGEX_MODIFIER => 'u',
         ];
+
+        if (!isset($options[self::DEFAULT_REGEX_EXP])) {
+            $expr = preg_quote($options[self::SEPARATOR_SYMBOL], $options[self::REGEX_DELIMITER]);
+            $options[self::DEFAULT_REGEX_EXP] = '[^' . $expr . ']+';
+        }
+
+        $this->options = $options;
     }
 
     /**
@@ -104,101 +67,86 @@ class Builder
      * @param array $placeholders
      * @return string
      */
-    public function getRegex(string $pattern, array $placeholders = []): string
+    public function getRegex(string $pattern, array $placeholders): string
     {
-        $names = $this->getNames($pattern);
-        list($st, $et, $sep, $opt) = $this->comp;
-        $pattern = preg_quote($pattern, $this->delimiter);
+        $regex = [];
+        $tokens = $this->getTokens($pattern);
+        $delimiter = $this->options[self::REGEX_DELIMITER];
+        $modifier = $this->options[self::REGEX_MODIFIER];
+        $default_exp = $this->options[self::DEFAULT_REGEX_EXP];
+        $capture_left = ($this->options[self::CAPTURE_MODE] & self::CAPTURE_LEFT) === self::CAPTURE_LEFT;
+        $capture_right = ($this->options[self::CAPTURE_MODE] & self::CAPTURE_RIGHT) === self::CAPTURE_RIGHT;
+        $allow_trail = ($this->options[self::CAPTURE_MODE] & self::ALLOW_OPT_TRAIL) === self::ALLOW_OPT_TRAIL;
 
-        if (empty($names)) {
-            goto TRAIL;
-        }
+        $sep = preg_quote($this->options[self::SEPARATOR_SYMBOL], $delimiter);
 
-        foreach ($names as $name) {
-            if (!isset($placeholders[$name])) {
-                $placeholders[$name] = $this->placeholder;
-            }
-        }
+        for($i = 0, $l = count($tokens); $i < $l; $i++) {
+            $t = $tokens[$i];
+            $n = $tokens[$i + 1] ?? null;
 
-        $unmatched = array();
-        $position = -1;
-
-        foreach ($placeholders as $key => $value) {
-            //$original = $key;
-            $key = preg_quote($key, $this->delimiter);
-            $value = '(?P<' . $key . '>(' . $value . '))';
-            $count = 0;
-            $position++;
-            if ($this->captureLeft) {
-                $pattern = str_replace($sep . $st . $key . $et, $sep . $value, $pattern, $count);
-
-                if ($count == 0) {
-                    if ($position === 0 && strpos($pattern, $sep . $st . $key . $opt . $et) === 0) {
-                        $pattern = str_replace($sep . $st . $key . $opt . $et, '(' . $sep . $value . '?)?', $pattern, $count);
+            if ($t['type'] === 'separator') {
+                if ($capture_left) {
+                    if (isset($n)) {
+                        if ($n['type'] === 'variable' && $n['opt']) {
+                            $regex[] = '(' . $sep . '(?P<' .preg_quote($n['value'], $delimiter) .
+                                '>(' . ($placeholders[$n['value']] ?? $default_exp) . ')))?';
+                            $i++;
+                        } else {
+                            $regex[] = preg_quote($t['value'], $delimiter);
+                        }
                     } else {
-                        $pattern = str_replace($sep . $st . $key . $opt . $et, '(?:' . $sep . $value . ')?', $pattern, $count);
+                        $regex[] = $sep . ($allow_trail ? '?' : '');
+                    }
+                } else {
+                    if (!isset($n)) {
+                        $regex[] = $sep . ($allow_trail ? '?' : '');
+                    } else {
+                        $regex[] = $sep;
+                    }
+                }
+            } elseif ($t['type'] === 'variable') {
+                if ($capture_right) {
+                    if (isset($n) && $n['type'] === 'separator' && $t['opt']) {
+                        $regex[] = '((?P<' .preg_quote($t['value'], $delimiter) .
+                            '>(' . ($placeholders[$t['value']] ?? $default_exp) . '))' . $sep . ')?';
+                        $i++;
+                    } else {
+                        $regex[] = '(?P<' .preg_quote($t['value'], $delimiter) .
+                            '>(' . ($placeholders[$t['value']] ?? $default_exp) . '))';
+                    }
+                } else {
+                    $regex[] = '(?P<' .preg_quote($t['value'], $delimiter) .
+                        '>(' . ($placeholders[$t['value']] ?? $default_exp) . '))';
+                    if (!isset($n) && $allow_trail){
+                        $regex[] = $sep . '?';
                     }
                 }
             } else {
-                $pattern = str_replace($st . $key . $et . $sep, $value . $sep, $pattern, $count);
-                if ($count == 0) {
-                    $pattern = str_replace($st . $key . $opt . $et . $sep, '(' . $value . $sep . ')?', $pattern, $count);
-                }
-            }
-
-            if ($count == 0) {
-                $unmatched[$key] = $value;
-            }
-        }
-
-        if (!empty($unmatched)) {
-            foreach ($unmatched as $key => $value) {
-                if ($this->addOptionalSeparator) {
-                    $value = $this->captureLeft ? '(' . $sep . ')?' . $value : $value . '(' . $sep . ')?';
-                }
-
-                $pattern = str_replace($st . $key . $et, $value, $pattern, $count);
-
-                if ($count == 0) {
-                    $pattern = str_replace($st . $key . $opt . $et, '(' . $value . ')?', $pattern);
+                $regex[] = preg_quote($t['value'], $delimiter);
+                if ($capture_left && $allow_trail && !isset($n)){
+                    $regex[] = $sep . '?';
                 }
             }
         }
 
-        TRAIL:
-
-        if ($this->captureTrail) {
-            if ($this->captureLeft) {
-                if (substr($pattern, strlen($pattern) - strlen($sep)) !== $sep) {
-                    $pattern = $pattern . '(' . $sep . ')?';
-                }
-            } else {
-                if (substr($pattern, 0, strlen($sep)) !== $sep) {
-                    $pattern = '(' . $sep . ')?' . $pattern;
-                }
-            }
-        }
-
-        return $this->delimiter . '^' . $pattern . '$' . $this->delimiter . $this->modifier;
+        return $delimiter . '^' . implode('', $regex) . '$' . $delimiter . $modifier;
     }
 
     /**
      * @param string $pattern
-     * @return array
+     * @return string[]
      */
     public function getNames(string $pattern): array
     {
-        list($st, $et) = $this->comp;
-
-        $regex = $this->delimiter . $st . '(.*?)' . $et . $this->delimiter;
-
-        preg_match_all($regex, $pattern, $matches);
-
-        $optional = $this->optional;
-
-        return array_map(function ($m) use ($optional) {
-            return trim($m, $optional);
-        }, $matches[1]);
+        $names = [];
+        foreach ($this->getTokens($pattern) as $token) {
+            if ($token['type'] === 'variable') {
+                if (!in_array($token['value'], $names)) {
+                    $names[] = $token['value'];
+                }
+            }
+        }
+        return $names;
     }
 
     /**
@@ -228,18 +176,116 @@ class Builder
      */
     public function getOptions(): array
     {
-        if ($this->options === null) {
-            $this->options = [
-                self::CAPTURE_MODE => $this->captureMode,
-                self::START_MARKER => $this->startMarker,
-                self::END_MARKER => $this->endMarker,
-                self::OPT_PLACEHOLDER_SYMBOL => $this->optional,
-                self::REGEX_DELIMITER => $this->delimiter,
-                self::REGEX_MODIFIER => $this->modifier,
-                self::DEFAULT_REGEX_EXP => $this->placeholder,
-            ];
+        return $this->options;
+    }
+
+    /**
+     * @param string $pattern
+     * @return array
+     */
+    protected function getTokens(string $pattern): array
+    {
+        $key = md5($pattern);
+
+        if (isset($this->tokens[$key])) {
+            return $this->tokens[$key];
         }
 
-        return $this->options;
+        $sym_separator = $this->options[self::SEPARATOR_SYMBOL];
+        $sym_opt = $this->options[self::OPT_SYMBOL];
+        $sym_start = $this->options[self::START_SYMBOL];
+        $sym_end = $this->options[self::END_SYMBOL];
+
+        $state = 'data';
+        $tokens = [];
+        $data_marker = 0;
+        for ($i = 0, $l = strlen($pattern); $i <= $l; $i++) {
+            if ($i === $l) {
+                $c = null;
+            } else {
+                $c = $pattern[$i];
+            }
+            switch ($state){
+                case 'data':
+                    if ($c === $sym_separator){
+                        if ($i - $data_marker > 0) {
+                            $tokens[] = [
+                                'type' => 'data',
+                                'value' => substr($pattern, $data_marker,   $i - $data_marker)
+                            ];
+                        }
+                        $tokens[] = [
+                            'type' => 'separator',
+                            'value' => $c,
+                        ];
+                        $data_marker = $i + 1;
+                    } elseif ($c === $sym_start) {
+                        if ($i - $data_marker > 0) {
+                            $tokens[] = [
+                                'type' => 'data',
+                                'value' => substr($pattern, $data_marker, $i - $data_marker)
+                            ];
+                        }
+                        $state = 'var';
+                        $data_marker = $i;
+                    } elseif ($c === null) {
+                        $state = 'eof';
+                        $i--;
+                    }
+                    break;
+                case 'var':
+                    if ($c === $sym_opt) {
+                        $state = 'opt_var';
+                    } elseif ($c === $sym_end) {
+                        $name = substr($pattern, $data_marker + 1, $i - $data_marker - 1);
+                        if (!preg_match('/^[a-zA-Z][a-zA-Z0-9_]*$/', $name)){
+                            throw new \RuntimeException("Invalid name $name");
+                        }
+                        $tokens[] = [
+                            'type' => 'variable',
+                            'value' => $name,
+                            'opt' => false,
+                        ];
+                        $data_marker = $i + 1;
+                        $state = 'data';
+                    } elseif ($c === null) {
+                        $state = 'eof';
+                        $i--;
+                    }
+                    break;
+                case 'opt_var':
+                    if ($c === null) {
+                        $state = 'eof';
+                        $i--;
+                    } elseif($c === $sym_end) {
+                        $name = substr($pattern, $data_marker + 1, ($i - 1) - $data_marker - 1);
+                        if (!preg_match('/^[a-zA-Z][a-zA-Z0-9_]*$/', $name)){
+                            throw new \RuntimeException("Invalid name");
+                        }
+                        $data_marker = $i + 1;
+                        $state = 'data';
+                        $tokens[] = [
+                            'type' => 'variable',
+                            'value' => $name,
+                            'opt' => true,
+                        ];
+                    } else {
+                        $state = 'data';
+                        $i--;
+                    }
+                    break;
+                case 'eof':
+                    if ($i - $data_marker > 0) {
+                        $tokens[] = [
+                            'type' => 'data',
+                            'value' => substr($pattern, $data_marker, $i - $data_marker)
+                        ];
+                    }
+                    break;
+            }
+        }
+
+        $this->tokens[$key] = $tokens;
+        return $tokens;
     }
 }
