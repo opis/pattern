@@ -84,7 +84,7 @@ class Builder
         $this->endMarker = $endTag = (string)($options[self::END_MARKER] ?? '}');
         $this->separator = $separator = (string)($options[self::SEGMENT_DELIMITER] ?? '/');
         $this->optional = $optional = (string)($options[self::OPT_PLACEHOLDER_SYMBOL] ?? '?');
-        $this->delimiter = $delimiter = (string)($options[self::REGEX_DELIMITER] ?? '`');
+        $this->delimiter = $delimiter = (string)($options[self::REGEX_DELIMITER] ?? '~');
         $this->modifier = $modifier = (string)($options[self::REGEX_MODIFIER] ?? 'u');
         $this->placeholder = $wildcard = (string)($options[self::DEFAULT_REGEX_EXP] ?? '[^' . preg_quote($separator, $delimiter) . ']+');
         $this->captureLeft = ($capture & static::CAPTURE_RIGHT) === static::CAPTURE_LEFT;
