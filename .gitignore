@@ -1,4 +1,6 @@
-.idea/
-composer.lock
 vendor/
-.DS_Store
+.idea/
+_site/
+shared/
+Gemfile.lock
+composer.lock
