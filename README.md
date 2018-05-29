@@ -4,7 +4,7 @@
 [![Latest Unstable Version](https://poser.pugx.org/opis/pattern/v/unstable.png)](//packagist.org/packages/opis/pattern)
 [![License](https://poser.pugx.org/opis/pattern/license.png)](https://packagist.org/packages/opis/pattern)
 
-Build RegEx expression from customizable patterns.
+Build RegEx expressions from customizable patterns.
 
 ## Documentation
 
