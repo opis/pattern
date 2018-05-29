@@ -17,6 +17,8 @@
 
 namespace Opis\Pattern;
 
+use RuntimeException;
+
 class RegexBuilder
 {
     /** @var array */
@@ -37,6 +39,7 @@ class RegexBuilder
     const REGEX_DELIMITER = 5;
     const REGEX_MODIFIER = 6;
     const DEFAULT_REGEX_EXP = 7;
+    const ASSIGN_SYMBOL = 8;
 
     /**
      * @param array $options
@@ -51,6 +54,7 @@ class RegexBuilder
             self::CAPTURE_MODE => self::CAPTURE_LEFT | self::ALLOW_OPT_TRAIL,
             self::REGEX_DELIMITER => '~',
             self::REGEX_MODIFIER => 'u',
+            self::ASSIGN_SYMBOL => '=',
         ];
 
         if (!isset($options[self::DEFAULT_REGEX_EXP])) {
@@ -66,7 +70,7 @@ class RegexBuilder
      * @param array $placeholders
      * @return string
      */
-    public function getRegex(string $pattern, array $placeholders): string
+    public function getRegex(string $pattern, array $placeholders = []): string
     {
         $regex = [];
         $tokens = $this->getTokens($pattern);
@@ -106,8 +110,8 @@ class RegexBuilder
                     }
                     break;
                 case 'variable':
-                    $pattern = '(?:' . ($placeholders[$t['value']] ?? $default_exp) . ')';
-                    $pattern = '(?P<' . preg_quote($t['value'], $delimiter) . '>' . $pattern . ')';
+                    $pattern = $placeholders[$t['value']] ?? $t['regex'] ?? $default_exp;
+                    $pattern = '(?P<' . preg_quote($t['value'], $delimiter) . '>(?:' . $pattern . '))';
 
                     $is_segment = (!$p || $p['type'] === 'separator') && (!$n || $n['type'] === 'separator');
 
@@ -237,10 +241,16 @@ class RegexBuilder
         $sym_opt = $this->options[self::OPT_SYMBOL];
         $sym_start = $this->options[self::START_SYMBOL];
         $sym_end = $this->options[self::END_SYMBOL];
+        $assign_symbol = $this->options[self::ASSIGN_SYMBOL];
+        $regex_delimiter = $this->options[self::REGEX_DELIMITER];
 
         $state = 'data';
         $tokens = [];
         $data_marker = 0;
+
+        $opt_var = false;
+        $assign_start = -1;
+
         for ($i = 0, $l = strlen($pattern); $i <= $l; $i++) {
             if ($i === $l) {
                 $c = null;
@@ -277,42 +287,86 @@ class RegexBuilder
                     break;
                 case 'var':
                     if ($c === $sym_opt) {
-                        $state = 'opt_var';
-                    } elseif ($c === $sym_end) {
-                        $name = substr($pattern, $data_marker + 1, $i - $data_marker - 1);
-                        if (!preg_match('/^[a-zA-Z][a-zA-Z0-9_]*$/', $name)) {
-                            throw new \RuntimeException("Invalid name $name");
+                        $opt_var = true;
+                    } elseif ($c === $assign_symbol) {
+                        $assign_start = $i;
+
+                        $sym_start_count = 0;
+                        $sym_end_count = 0;
+
+                        $last = 0;
+                        for ($j = $i + 1; $j < $l; $j++) {
+                            if ($pattern[$j] === $sym_start) {
+                                $sym_start_count++;
+                            }
+                            elseif ($pattern[$j] === $sym_end) {
+                                $sym_end_count++;
+                                if ($sym_end_count > $sym_start_count) {
+                                    $last = $j - 1;
+                                    break;
+                                }
+                            }
                         }
+
+                        if ($last > 0) {
+                            $i = $last;
+                        }
+
+                        unset($j, $sym_start_count, $sym_end_count, $last);
+                    } elseif ($c === $sym_end) {
+
+                        // Get placeholder name
+                        $start = $data_marker + 1;
+                        if ($assign_start >= 0) {
+                            $end = $assign_start - $data_marker - 1;
+                        }
+                        else {
+                            $end = $i - $data_marker - 1;
+                        }
+                        if ($opt_var) {
+                            $end--;
+                        }
+
+                        $name = substr($pattern, $start, $end);
+                        if (!preg_match('/^[a-z][a-z0-9_]*$/i', $name)) {
+                            throw new RuntimeException("Invalid placeholder name: {$name}");
+                        }
+
+                        // Get assign value
+                        $assign_value = null;
+                        if ($assign_start >= 0) {
+                            $start = $assign_start + 1;
+                            $end = $i - $assign_start - 1;
+                            $assign_value = substr($pattern, $start, $end);
+                            if ($assign_value === '') {
+                                $assign_value = null;
+                            }
+                            else {
+
+                                $test =  $regex_delimiter . '(';
+                                $test .= $assign_value;
+                                $test .= ')' . $regex_delimiter;
+
+                                if (@preg_match($test, '') === false) {
+                                    throw new RuntimeException("Invalid regex for placeholder {$name} using {$regex_delimiter} as delimiter: {$assign_value}");
+                                }
+                                unset($test);
+                            }
+                        }
+
                         $tokens[] = [
                             'type' => 'variable',
                             'value' => $name,
-                            'opt' => false,
+                            'opt' => $opt_var,
+                            'regex' => $assign_value,
                         ];
+                        $opt_var = false;
+                        $assign_start = -1;
+                        unset($assign_value, $name);
                         $data_marker = $i + 1;
                         $state = 'data';
                     } elseif ($c === null) {
                         $state = 'eof';
-                        $i--;
-                    }
-                    break;
-                case 'opt_var':
-                    if ($c === null) {
-                        $state = 'eof';
-                        $i--;
-                    } elseif ($c === $sym_end) {
-                        $name = substr($pattern, $data_marker + 1, ($i - 1) - $data_marker - 1);
-                        if (!preg_match('/^[a-zA-Z][a-zA-Z0-9_]*$/', $name)) {
-                            throw new \RuntimeException("Invalid name");
-                        }
-                        $data_marker = $i + 1;
-                        $state = 'data';
-                        $tokens[] = [
-                            'type' => 'variable',
-                            'value' => $name,
-                            'opt' => true,
-                        ];
-                    } else {
-                        $state = 'data';
                         $i--;
                     }
                     break;
