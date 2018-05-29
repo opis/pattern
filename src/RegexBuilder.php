@@ -39,7 +39,6 @@ class RegexBuilder
     const DEFAULT_REGEX_EXP = 7;
 
     /**
-     * Constructor
      * @param array $options
      */
     public function __construct(array $options = [])
@@ -74,7 +73,6 @@ class RegexBuilder
         $delimiter = $this->options[self::REGEX_DELIMITER];
         $modifier = $this->options[self::REGEX_MODIFIER];
         $default_exp = $this->options[self::DEFAULT_REGEX_EXP];
-        $capture_left = ($this->options[self::CAPTURE_MODE] & self::CAPTURE_LEFT) === self::CAPTURE_LEFT;
         $capture_right = ($this->options[self::CAPTURE_MODE] & self::CAPTURE_RIGHT) === self::CAPTURE_RIGHT;
         $allow_trail = ($this->options[self::CAPTURE_MODE] & self::ALLOW_OPT_TRAIL) === self::ALLOW_OPT_TRAIL;
 
@@ -85,56 +83,77 @@ class RegexBuilder
             $p = $tokens[$i - 1] ?? null;
             $n = $tokens[$i + 1] ?? null;
 
-            if ($t['type'] === 'separator') {
-                if ($capture_left) {
-                    if (isset($n)) {
-                        if ($n['type'] === 'variable' && $n['opt']) {
-                            if (isset($p)) {
-                                $regex[] = '(' . $sep . '(?P<' . preg_quote($n['value'], $delimiter) .
-                                    '>(' . ($placeholders[$n['value']] ?? $default_exp) . ')))?';
-                            } else {
-                                $regex[] = $sep;
-                                $expr = '(?P<' . preg_quote($n['value'], $delimiter) .
-                                    '>(' . ($placeholders[$n['value']] ?? $default_exp) . '))';
-                                $regex[] = '(' . $expr . ($allow_trail ? $sep . '?' : '') . ')?';
+            switch ($t['type']) {
+                case 'separator':
+                    if ($capture_right) {
+                        $regex[] = $sep;
+                        if (!$n && $allow_trail) {
+                            $regex[] = '?';
+                        }
+                    }
+                    else {
+                        if (!$n) {
+                            // No more tokens
+                            $regex[] = $sep;
+                            if ($allow_trail) {
+                                $regex[] = '?';
+                            }
+                        }
+                        elseif ($n['type'] !== 'variable') {
+                            // Let variables handle capture
+                            $regex[] = $sep;
+                        }
+                    }
+                    break;
+                case 'variable':
+                    $pattern = '(?:' . ($placeholders[$t['value']] ?? $default_exp) . ')';
+                    $pattern = '(?P<' . preg_quote($t['value'], $delimiter) . '>' . $pattern . ')';
+
+                    $is_segment = (!$p || $p['type'] === 'separator') && (!$n || $n['type'] === 'separator');
+
+                    if ($capture_right) {
+                        if ($is_segment) {
+                            if ($n) {
+                                $pattern = '(?:' . $pattern . $sep . ')';
                             }
                             $i++;
-                        } else {
-                            $regex[] = preg_quote($t['value'], $delimiter);
                         }
-                    } else {
-                        $regex[] = $sep . ($allow_trail ? '?' : '');
+                        if ($t['opt']) {
+                            $pattern .= '?';
+                        }
                     }
-                } else {
-                    if (!isset($n)) {
-                        $regex[] = $sep . ($allow_trail ? '?' : '');
-                    } else {
-                        $regex[] = $sep;
+                    else {
+                        if ($is_segment) {
+                            if ($p) {
+                                $pattern = '(?:' . $sep . $pattern . ')';
+                            }
+                        }
+                        elseif ($p && $p['type'] === 'separator') {
+                            $pattern = $sep . $pattern;
+                        }
+
+                        if ($t['opt']) {
+                            $pattern .= '?';
+                        }
                     }
-                }
-            } elseif ($t['type'] === 'variable') {
-                if ($capture_right) {
-                    if (isset($n) && $n['type'] === 'separator' && $t['opt']) {
-                        $regex[] = '((?P<' . preg_quote($t['value'], $delimiter) .
-                            '>(' . ($placeholders[$t['value']] ?? $default_exp) . '))' . $sep . ')?';
-                        $i++;
-                    } else {
-                        $regex[] = '(?P<' . preg_quote($t['value'], $delimiter) .
-                            '>(' . ($placeholders[$t['value']] ?? $default_exp) . '))';
+
+                    if (!$n && $allow_trail) {
+                        $pattern .= $sep . '?';
                     }
-                } else {
-                    $regex[] = '(?P<' . preg_quote($t['value'], $delimiter) .
-                        '>(' . ($placeholders[$t['value']] ?? $default_exp) . '))';
-                    if (!isset($n) && $allow_trail) {
+
+                    $regex[] = $pattern;
+                    break;
+                default:
+                    $regex[] = preg_quote($t['value'], $delimiter);
+                    if (!$n && $allow_trail) {
                         $regex[] = $sep . '?';
                     }
-                }
-            } else {
-                $regex[] = preg_quote($t['value'], $delimiter);
-                if ($capture_left && $allow_trail && !isset($n)) {
-                    $regex[] = $sep . '?';
-                }
+                    break;
             }
+        }
+
+        if (!$l && $allow_trail) {
+            $regex[] = $sep . '?';
         }
 
         return $delimiter . '^' . implode('', $regex) . '$' . $delimiter . $modifier;
@@ -164,19 +183,34 @@ class RegexBuilder
      */
     public function getValues(string $regex, string $path): array
     {
-        preg_match($regex, $path, $parameters);
-
-        $parameters = array_slice($parameters, 1);
-
-        if (count($parameters) === 0) {
-            return array();
+        if (!preg_match($regex, $path, $parameters)) {
+            return [];
         }
 
-        $keys = array_filter(array_keys($parameters), function ($value) use ($parameters) {
-            return is_string($value) && strlen($value) > 0 && isset($parameters[$value]);
-        });
+        // Remove full match
+        unset($parameters[0]);
 
-        return array_intersect_key($parameters, array_flip($keys));
+        if (count($parameters) === 0) {
+            return [];
+        }
+
+        $data = [];
+        foreach ($parameters as $key => $value) {
+            if (is_string($key) && $key !== '') {
+                $data[$key] = $value;
+            }
+        }
+        return $data;
+    }
+
+    /**
+     * @param string $regex
+     * @param string $path
+     * @return bool
+     */
+    public function matches(string $regex, string $path): bool
+    {
+        return (bool) preg_match($regex, $path);
     }
 
     /**
