@@ -26,6 +26,8 @@ This library is available on [Packagist](https://packagist.org/packages/opis/pat
 composer require opis/pattern
 ```
 
+Or directly in `composer.json` file
+
 ```json
 {
     "require": {
