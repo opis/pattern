@@ -23,15 +23,15 @@ use PHPUnit\Framework\TestCase;
 class DefaultTest extends TestCase
 {
     /** @var RegexBuilder */
-    protected $pathBuilder;
+    private static $pathBuilder;
 
     /** @var RegexBuilder */
-    protected $domainBuilder;
+    private static $domainBuilder;
 
-    public function setUp()
+    public static function setUpBeforeClass()
     {
-        $this->pathBuilder = new RegexBuilder();
-        $this->domainBuilder = new RegexBuilder([
+        self::$pathBuilder = new RegexBuilder();
+        self::$domainBuilder = new RegexBuilder([
             RegexBuilder::CAPTURE_MODE => RegexBuilder::CAPTURE_RIGHT | RegexBuilder::ALLOW_OPT_TRAIL,
             RegexBuilder::SEPARATOR_SYMBOL => '.',
         ]);
@@ -55,7 +55,7 @@ class DefaultTest extends TestCase
      */
     public function testLeftCapture($pattern, $placeholders, $expected, $tests = null)
     {
-        $this->runBuilder($this->pathBuilder, $pattern, $placeholders, $expected, $tests);
+        $this->runBuilder(self::$pathBuilder, $pattern, $placeholders, $expected, $tests);
     }
 
     /**
@@ -63,7 +63,7 @@ class DefaultTest extends TestCase
      */
     public function testRightCapture($pattern, $placeholders, $expected, $tests = null)
     {
-        $this->runBuilder($this->domainBuilder, $pattern, $placeholders, $expected, $tests);
+        $this->runBuilder(self::$domainBuilder, $pattern, $placeholders, $expected, $tests);
     }
 
     public function pathProvider()
