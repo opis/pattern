@@ -23,11 +23,11 @@ use PHPUnit\Framework\TestCase;
 class ValuesTest extends TestCase
 {
     /** @var RegexBuilder */
-    protected $builder;
+    private static $builder;
 
-    protected function setUp()
+    public static function setUpBeforeClass()
     {
-        $this->builder = new RegexBuilder();
+        self::$builder = new RegexBuilder();
     }
 
     /**
@@ -35,13 +35,14 @@ class ValuesTest extends TestCase
      */
     public function testValues($pattern, $placeholders, $tests)
     {
-        $regex = $this->builder->getRegex($pattern, $placeholders);
+        $builder = self::$builder;
+        $regex = $builder->getRegex($pattern, $placeholders);
         foreach ($tests as $path => $values) {
-            if (!$this->builder->matches($regex, $path)) {
+            if (!$builder->matches($regex, $path)) {
                 $this->assertNull($values, "$pattern => $path");
             }
             else {
-                $this->assertEquals($values, $this->builder->getValues($regex, $path), "$pattern => $path");
+                $this->assertEquals($values, $builder->getValues($regex, $path), "$pattern => $path");
             }
         }
     }
@@ -132,6 +133,21 @@ class ValuesTest extends TestCase
                 'pre-/-suf' => [],
                 'pre/suf' => null,
             ]],
+            ['/{a?}/{b}', ['a' => '.*'], [
+                '/abc/2' => [
+                    'a' => 'abc',
+                    'b' => '2',
+                ],
+                'abc/2' => null,
+                '/2' => [
+                    'a' => '',
+                    'b' => '2',
+                ],
+                '/abc/def/223' => [
+                    'a' => 'abc/def',
+                    'b' => '223',
+                ],
+            ]]
         ];
     }
 
