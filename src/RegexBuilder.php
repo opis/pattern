@@ -94,16 +94,14 @@ class RegexBuilder
                         if (!$n && $allow_trail) {
                             $regex[] = '?';
                         }
-                    }
-                    else {
+                    } else {
                         if (!$n) {
                             // No more tokens
                             $regex[] = $sep;
                             if ($allow_trail) {
                                 $regex[] = '?';
                             }
-                        }
-                        elseif ($n['type'] !== 'variable') {
+                        } elseif ($n['type'] !== 'variable') {
                             // Let variables handle capture
                             $regex[] = $sep;
                         }
@@ -125,14 +123,12 @@ class RegexBuilder
                         if ($t['opt']) {
                             $pattern .= '?';
                         }
-                    }
-                    else {
+                    } else {
                         if ($is_segment) {
                             if ($p) {
                                 $pattern = '(?:' . $sep . $pattern . ')';
                             }
-                        }
-                        elseif ($p && $p['type'] === 'separator') {
+                        } elseif ($p && $p['type'] === 'separator') {
                             $pattern = $sep . $pattern;
                         }
 
@@ -214,7 +210,7 @@ class RegexBuilder
      */
     public function matches(string $regex, string $path): bool
     {
-        return (bool) preg_match($regex, $path);
+        return (bool)preg_match($regex, $path);
     }
 
     /**
@@ -263,7 +259,7 @@ class RegexBuilder
                         if ($i - $data_marker > 0) {
                             $tokens[] = [
                                 'type' => 'data',
-                                'value' => substr($pattern, $data_marker, $i - $data_marker)
+                                'value' => substr($pattern, $data_marker, $i - $data_marker),
                             ];
                         }
                         $tokens[] = [
@@ -275,7 +271,7 @@ class RegexBuilder
                         if ($i - $data_marker > 0) {
                             $tokens[] = [
                                 'type' => 'data',
-                                'value' => substr($pattern, $data_marker, $i - $data_marker)
+                                'value' => substr($pattern, $data_marker, $i - $data_marker),
                             ];
                         }
                         $state = 'var';
@@ -298,8 +294,7 @@ class RegexBuilder
                         for ($j = $i + 1; $j < $l; $j++) {
                             if ($pattern[$j] === $sym_start) {
                                 $sym_start_count++;
-                            }
-                            elseif ($pattern[$j] === $sym_end) {
+                            } elseif ($pattern[$j] === $sym_end) {
                                 $sym_end_count++;
                                 if ($sym_end_count > $sym_start_count) {
                                     $last = $j - 1;
@@ -319,8 +314,7 @@ class RegexBuilder
                         $start = $data_marker + 1;
                         if ($assign_start >= 0) {
                             $end = $assign_start - $data_marker - 1;
-                        }
-                        else {
+                        } else {
                             $end = $i - $data_marker - 1;
                         }
                         if ($opt_var) {
@@ -340,10 +334,9 @@ class RegexBuilder
                             $assign_value = substr($pattern, $start, $end);
                             if ($assign_value === '') {
                                 $assign_value = null;
-                            }
-                            else {
+                            } else {
 
-                                $test =  $regex_delimiter . '(';
+                                $test = $regex_delimiter . '(';
                                 $test .= $assign_value;
                                 $test .= ')' . $regex_delimiter;
 
@@ -374,7 +367,7 @@ class RegexBuilder
                     if ($i - $data_marker > 0) {
                         $tokens[] = [
                             'type' => 'data',
-                            'value' => substr($pattern, $data_marker, $i - $data_marker)
+                            'value' => substr($pattern, $data_marker, $i - $data_marker),
                         ];
                     }
                     break;
