@@ -108,8 +108,14 @@ class RegexBuilder
                     }
                     break;
                 case 'variable':
-                    $pattern = $placeholders[$t['value']] ?? $t['regex'] ?? $default_exp;
-                    $pattern = '(?P<' . preg_quote($t['value'], $delimiter) . '>(?:' . $pattern . '))';
+                    if ($t['value'] === null) {
+                        $pattern = $t['regex'] ?? $default_exp;
+                        $pattern = '(?:' . $pattern . ')';
+                    }
+                    else {
+                        $pattern = $placeholders[$t['value']] ?? $t['regex'] ?? $default_exp;
+                        $pattern = '(?P<' . preg_quote($t['value'], $delimiter) . '>(?:' . $pattern . '))';
+                    }
 
                     $is_segment = (!$p || $p['type'] === 'separator') && (!$n || $n['type'] === 'separator');
 
@@ -167,7 +173,7 @@ class RegexBuilder
     {
         $names = [];
         foreach ($this->getTokens($pattern) as $token) {
-            if ($token['type'] === 'variable') {
+            if ($token['type'] === 'variable' && $token['value'] !== null) {
                 if (!in_array($token['value'], $names)) {
                     $names[] = $token['value'];
                 }
@@ -322,7 +328,9 @@ class RegexBuilder
                         }
 
                         $name = substr($pattern, $start, $end);
-                        if (!preg_match('/^[a-z][a-z0-9_]*$/i', $name)) {
+                        if ($name === '') {
+                            $name = null;
+                        } elseif (!preg_match('/^[a-z][a-z0-9_]*$/i', $name)) {
                             throw new RuntimeException("Invalid placeholder name: {$name}");
                         }
 
@@ -341,10 +349,14 @@ class RegexBuilder
                                 $test .= ')' . $regex_delimiter;
 
                                 if (@preg_match($test, '') === false) {
-                                    throw new RuntimeException("Invalid regex for placeholder {$name} using {$regex_delimiter} as delimiter: {$assign_value}");
+                                    throw new RuntimeException("Invalid regex for placeholder {$name}, using '{$regex_delimiter}' as delimiter: {$assign_value}");
                                 }
                                 unset($test);
                             }
+                        }
+
+                        if ($name === null && $assign_value === null) {
+                            throw new RuntimeException("Anonymous placeholders must have an inline regex. Pattern: {$pattern}");
                         }
 
                         $tokens[] = [

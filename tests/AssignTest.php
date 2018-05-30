@@ -30,6 +30,14 @@ class AssignTest extends TestCase
         self::$builder = new RegexBuilder();
     }
 
+    public function testAssignError()
+    {
+        $builder = self::$builder;
+        $this->expectException(\RuntimeException::class);
+        // Unescaped regex delimiter
+        $builder->getRegex("{a?=\d~a}");
+    }
+
     /**
      * @dataProvider assignDataProvider
      */
@@ -98,7 +106,19 @@ class AssignTest extends TestCase
                 '5/=' => true,
                 'a/=' => false,
                 '1/' => false,
-            ]]
+            ]],
+            ['{=\d}{a?=[a-z]+}', [], [
+                '2a' => true,
+                '0abc' => true,
+                'b' => false,
+                '22a' => false,
+            ]],
+            ['{?=\d}{a?=[a-z]+}', [], [
+                '2a' => true,
+                '0abc' => true,
+                'b' => true,
+                '22a' => false,
+            ]],
         ];
     }
 }
