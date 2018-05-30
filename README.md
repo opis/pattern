@@ -1,7 +1,7 @@
 # Opis Pattern
 [![Build Status](https://travis-ci.org/opis/pattern.svg?branch=master)](https://travis-ci.org/opis/pattern)
 [![Latest Stable Version](https://poser.pugx.org/opis/pattern/version.png)](https://packagist.org/packages/opis/pattern)
-[![Latest Unstable Version](https://poser.pugx.org/opis/pattern/v/unstable.png)](//packagist.org/packages/opis/pattern)
+[![Latest Unstable Version](https://poser.pugx.org/opis/pattern/v/unstable.png)](https//packagist.org/packages/opis/pattern)
 [![License](https://poser.pugx.org/opis/pattern/license.png)](https://packagist.org/packages/opis/pattern)
 
 Build RegEx from customizable patterns.
@@ -20,13 +20,14 @@ Documentation and examples can be found [here](https://www.opis.io/pattern).
 
 ### Installation
 
-This library is available on [Packagist](https://packagist.org/packages/opis/pattern) and can be installed using [Composer](http://getcomposer.org).
+This library is available on [Packagist](https://packagist.org/packages/opis/pattern) 
+and can be installed from a command line interface by using [Composer](http://getcomposer.org).
 
 ```bash
 composer require opis/pattern
 ```
 
-Or directly in `composer.json` file
+Or you could directly reference it into your `composer.json` file as a dependency
 
 ```json
 {
