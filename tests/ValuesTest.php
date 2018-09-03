@@ -40,8 +40,7 @@ class ValuesTest extends TestCase
         foreach ($tests as $path => $values) {
             if (!$builder->matches($regex, $path)) {
                 $this->assertNull($values, "$pattern => $path");
-            }
-            else {
+            } else {
                 $this->assertEquals($values, $builder->getValues($regex, $path), "$pattern => $path");
             }
         }
@@ -50,104 +49,128 @@ class ValuesTest extends TestCase
     public function valuesProvider()
     {
         return [
-            ['{a}/{b}', [], [
-                'abc/test/' => [
-                    'a' => 'abc',
-                    'b' => 'test'
+            [
+                '{a}/{b}',
+                [],
+                [
+                    'abc/test/' => [
+                        'a' => 'abc',
+                        'b' => 'test',
+                    ],
+                    '123/111' => [
+                        'a' => '123',
+                        'b' => '111',
+                    ],
+                    '/t' => null,
                 ],
-                '123/111' => [
-                    'a' => '123',
-                    'b' => '111'
+            ],
+            [
+                '{a}/{b}',
+                ['a' => '\d+'],
+                [
+                    'abc/test/' => null,
+                    '123/111' => [
+                        'a' => '123',
+                        'b' => '111',
+                    ],
+                    '123/aaa' => [
+                        'a' => '123',
+                        'b' => 'aaa',
+                    ],
+                    '123' => null,
                 ],
-                '/t' => null
-            ]],
-            ['{a}/{b}', ['a' => '\d+'], [
-                'abc/test/' => null,
-                '123/111' => [
-                    'a' => '123',
-                    'b' => '111'
+            ],
+            [
+                '{a}/{b?}',
+                [],
+                [
+                    'abc/test/' => [
+                        'a' => 'abc',
+                        'b' => 'test',
+                    ],
+                    '123/111' => [
+                        'a' => '123',
+                        'b' => '111',
+                    ],
+                    'aaa' => [
+                        'a' => 'aaa',
+                    ],
+                    'aaa/' => [
+                        'a' => 'aaa',
+                    ],
+                    '/bbb' => null,
                 ],
-                '123/aaa' => [
-                    'a' => '123',
-                    'b' => 'aaa'
+            ],
+            [
+                '{a?}/{b?}',
+                [],
+                [
+                    'abc/test/' => [
+                        'a' => 'abc',
+                        'b' => 'test',
+                    ],
+                    '123/111' => [
+                        'a' => '123',
+                        'b' => '111',
+                    ],
+                    'aaa' => [
+                        'a' => 'aaa',
+                    ],
+                    'aaa/' => [
+                        'a' => 'aaa',
+                    ],
+                    '/bbb' => [
+                        'a' => '',
+                        'b' => 'bbb',
+                    ],
+                    '' => [],
+                    '/' => [],
+                    '//' => null,
                 ],
-                '123' => null
-            ]],
-            ['{a}/{b?}', [], [
-                'abc/test/' => [
-                    'a' => 'abc',
-                    'b' => 'test'
+            ],
+            [
+                'pre-{a?}/{b?}-suf',
+                [],
+                [
+                    'abc/test/' => null,
+                    'pre-abc/def-suf' => [
+                        'a' => 'abc',
+                        'b' => 'def',
+                    ],
+                    'pre-abc/def-suf/' => [
+                        'a' => 'abc',
+                        'b' => 'def',
+                    ],
+                    'pre-/def-suf' => [
+                        'a' => '',
+                        'b' => 'def',
+                    ],
+                    'pre-abc/-suf' => [
+                        'a' => 'abc',
+                    ],
+                    'pre-/-suf' => [],
+                    'pre/suf' => null,
                 ],
-                '123/111' => [
-                    'a' => '123',
-                    'b' => '111'
+            ],
+            [
+                '/{a?}/{b}',
+                ['a' => '.*'],
+                [
+                    '/abc/2' => [
+                        'a' => 'abc',
+                        'b' => '2',
+                    ],
+                    'abc/2' => null,
+                    '/2' => [
+                        'a' => '',
+                        'b' => '2',
+                    ],
+                    '/abc/def/223' => [
+                        'a' => 'abc/def',
+                        'b' => '223',
+                    ],
                 ],
-                'aaa' => [
-                    'a' => 'aaa'
-                ],
-                'aaa/' => [
-                    'a' => 'aaa'
-                ],
-                '/bbb' => null
-            ]],
-            ['{a?}/{b?}', [], [
-                'abc/test/' => [
-                    'a' => 'abc',
-                    'b' => 'test'
-                ],
-                '123/111' => [
-                    'a' => '123',
-                    'b' => '111'
-                ],
-                'aaa' => [
-                    'a' => 'aaa'
-                ],
-                'aaa/' => [
-                    'a' => 'aaa'
-                ],
-                '/bbb' => [
-                    'a' => '',
-                    'b' => 'bbb'
-                ],
-                '' => [],
-                '/' => [],
-                '//' => null,
-            ]],
-            ['pre-{a?}/{b?}-suf', [], [
-                'abc/test/' => null,
-                'pre-abc/def-suf' => [
-                    'a' => 'abc',
-                    'b' => 'def'
-                ],
-                'pre-abc/def-suf/' => [
-                    'a' => 'abc',
-                    'b' => 'def'
-                ],
-                'pre-/def-suf' => [
-                    'a' => '',
-                    'b' => 'def'
-                ],
-                'pre-abc/-suf' => [
-                    'a' => 'abc'
-                ],
-                'pre-/-suf' => [],
-                'pre/suf' => null,
-            ]],
-            ['/{a?}/{b}', ['a' => '.*'], [
-                '/abc/2' => [
-                    'a' => 'abc',
-                    'b' => '2',
-                ],
-                'abc/2' => null,
-                '/2' => [
-                    'a' => '',
-                    'b' => '2',
-                ],
-                '/abc/def/223' => [
-                    'a' => 'abc/def',
-                    'b' => '223',
-                ],
-            ]]
+            ],
         ];
     }
 

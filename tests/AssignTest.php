@@ -56,69 +56,105 @@ class AssignTest extends TestCase
     public function assignDataProvider()
     {
         return [
-            ['{a=\d{2,3}}', [], [
-                '11' => true,
-                '111' => true,
-                '2' => false,
-                '' => false,
-                '1111' => false,
-                'aa' => false,
-            ]],
-            ['{a?=\d{2,3}}', [], [
-                '11' => true,
-                '111' => true,
-                '2' => false,
-                '' => true,
-                '1111' => false,
-                'aa' => false,
-            ]],
-            ['{a=\d}', ['a' => '[a-z]'], [
-                'a' => true,
-                'z' => true,
-                '1' => false,
-                '' => false,
-            ]],
-            ['{a?=\d}', ['a' => '[a-z]'], [
-                'a' => true,
-                'z' => true,
-                '' => true,
-                '1' => false,
-            ]],
-            ['/{a?=cent(re|er)}/{b=\d+}', [], [
-                '/center/1' => true,
-                '/centre/23' => true,
-                '/1' => true,
-                '/123' => true,
-                'a/12' => false,
-                '/cent/123' => false,
-            ]],
-            ['/{a?=cent(re|er)}/{b=\d+}', ['a' => '.*'], [
-                '/center/1' => true,
-                '/centre/23' => true,
-                '/1' => true,
-                '/123' => true,
-                '/cent/123' => true,
-                '/abc/def/123' => true,
-            ]],
-            ['{a=\d}{b?=-?abc}/{c=[=]}', [], [
-                '1-abc/=' => true,
-                '2abc/=' > true,
-                '5/=' => true,
-                'a/=' => false,
-                '1/' => false,
-            ]],
-            ['{=\d}{a?=[a-z]+}', [], [
-                '2a' => true,
-                '0abc' => true,
-                'b' => false,
-                '22a' => false,
-            ]],
-            ['{?=\d}{a?=[a-z]+}', [], [
-                '2a' => true,
-                '0abc' => true,
-                'b' => true,
-                '22a' => false,
-            ]],
+            [
+                '{a=\d{2,3}}',
+                [],
+                [
+                    '11' => true,
+                    '111' => true,
+                    '2' => false,
+                    '' => false,
+                    '1111' => false,
+                    'aa' => false,
+                ],
+            ],
+            [
+                '{a?=\d{2,3}}',
+                [],
+                [
+                    '11' => true,
+                    '111' => true,
+                    '2' => false,
+                    '' => true,
+                    '1111' => false,
+                    'aa' => false,
+                ],
+            ],
+            [
+                '{a=\d}',
+                ['a' => '[a-z]'],
+                [
+                    'a' => true,
+                    'z' => true,
+                    '1' => false,
+                    '' => false,
+                ],
+            ],
+            [
+                '{a?=\d}',
+                ['a' => '[a-z]'],
+                [
+                    'a' => true,
+                    'z' => true,
+                    '' => true,
+                    '1' => false,
+                ],
+            ],
+            [
+                '/{a?=cent(re|er)}/{b=\d+}',
+                [],
+                [
+                    '/center/1' => true,
+                    '/centre/23' => true,
+                    '/1' => true,
+                    '/123' => true,
+                    'a/12' => false,
+                    '/cent/123' => false,
+                ],
+            ],
+            [
+                '/{a?=cent(re|er)}/{b=\d+}',
+                ['a' => '.*'],
+                [
+                    '/center/1' => true,
+                    '/centre/23' => true,
+                    '/1' => true,
+                    '/123' => true,
+                    '/cent/123' => true,
+                    '/abc/def/123' => true,
+                ],
+            ],
+            [
+                '{a=\d}{b?=-?abc}/{c=[=]}',
+                [],
+                [
+                    '1-abc/=' => true,
+                    '2abc/=' > true,
+                    '5/=' => true,
+                    'a/=' => false,
+                    '1/' => false,
+                ],
+            ],
+            [
+                '{=\d}{a?=[a-z]+}',
+                [],
+                [
+                    '2a' => true,
+                    '0abc' => true,
+                    'b' => false,
+                    '22a' => false,
+                ],
+            ],
+            [
+                '{?=\d}{a?=[a-z]+}',
+                [],
+                [
+                    '2a' => true,
+                    '0abc' => true,
+                    'b' => true,
+                    '22a' => false,
+                ],
+            ],
         ];
     }
 }

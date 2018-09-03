@@ -111,8 +111,7 @@ class RegexBuilder
                     if ($t['value'] === null) {
                         $pattern = $t['regex'] ?? $default_exp;
                         $pattern = '(?:' . $pattern . ')';
-                    }
-                    else {
+                    } else {
                         $pattern = $placeholders[$t['value']] ?? $t['regex'] ?? $default_exp;
                         $pattern = '(?P<' . preg_quote($t['value'], $delimiter) . '>(?:' . $pattern . '))';
                     }
